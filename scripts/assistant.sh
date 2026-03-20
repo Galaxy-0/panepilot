@@ -8,6 +8,35 @@ source "$SCRIPT_DIR/lib/common.sh"
 LOG_FILE=$(panepilot_log_path assistant)
 SELF_CMD=${PANEPILOT_ENTRYPOINT:-$0}
 
+wait_ready() {
+  require_command tmux
+
+  local timeout="${1:-$PANEPILOT_READY_TIMEOUT_SECONDS}"
+  local started_at now state
+  started_at=$(date +%s)
+
+  while true; do
+    state=$(panepilot_health_state)
+    if panepilot_state_is_healthy "$state"; then
+      printf 'state=%s\n' "$state"
+      return 0
+    fi
+
+    if [[ "$state" == "stopped" || "$state" == "dead" || "$state" == "error" ]]; then
+      printf 'state=%s\n' "$state" >&2
+      return 1
+    fi
+
+    now=$(date +%s)
+    if (( now - started_at >= timeout )); then
+      printf 'Timed out waiting for ready state after %ss (last_state=%s)\n' "$timeout" "$state" >&2
+      return 1
+    fi
+
+    sleep "$PANEPILOT_READY_POLL_INTERVAL_SECONDS"
+  done
+}
+
 start() {
   require_command tmux
 
@@ -38,6 +67,11 @@ start() {
   ensure_panepilot_dirs
   tmux new-session -d -s "$PANEPILOT_SESSION" -c "$PANEPILOT_WORK_DIR" "$launch_command"
   sleep 2
+
+  if [[ "$PANEPILOT_WAIT_FOR_READY" == "1" ]]; then
+    wait_ready "$PANEPILOT_READY_TIMEOUT_SECONDS" >/dev/null
+  fi
+
   printf 'Started session: %s\n' "$PANEPILOT_SESSION"
   printf 'Attach with: %s attach\n' "$SELF_CMD"
   panepilot_log "$LOG_FILE" "started session"
@@ -74,19 +108,49 @@ attach() {
 status() {
   require_command tmux
 
-  if tmux has-session -t "$PANEPILOT_SESSION" 2>/dev/null; then
-    printf 'running\n'
+  local state
+  state=$(panepilot_health_state)
+
+  if panepilot_has_session; then
+    printf '%s\n' "$state"
     printf 'session=%s\n' "$PANEPILOT_SESSION"
     printf 'work_dir=%s\n' "$PANEPILOT_WORK_DIR"
     printf 'agent_cmd=%s\n' "$PANEPILOT_AGENT_CMD"
     if [[ -n "$PANEPILOT_AGENT_ENV_FILE" ]]; then
       printf 'agent_env_file=%s\n' "$PANEPILOT_AGENT_ENV_FILE"
     fi
+    if [[ -n "$PANEPILOT_PROCESS_REGEX" ]]; then
+      printf 'process_regex=%s\n' "$PANEPILOT_PROCESS_REGEX"
+    fi
+    if [[ -n "$PANEPILOT_READY_REGEX" ]]; then
+      printf 'ready_regex=%s\n' "$PANEPILOT_READY_REGEX"
+    fi
+    if [[ -n "$PANEPILOT_ERROR_REGEX" ]]; then
+      printf 'error_regex=%s\n' "$PANEPILOT_ERROR_REGEX"
+    fi
+    printf 'current_command=%s\n' "$(panepilot_pane_current_command)"
     printf 'log_dir=%s\n' "$PANEPILOT_LOG_DIR"
   else
-    printf 'stopped\n'
+    printf '%s\n' "$state"
     printf 'session=%s\n' "$PANEPILOT_SESSION"
   fi
+}
+
+health() {
+  require_command tmux
+
+  local state
+  state=$(panepilot_health_state)
+  printf 'state=%s\n' "$state"
+  printf 'session=%s\n' "$PANEPILOT_SESSION"
+
+  if ! panepilot_has_session; then
+    return 0
+  fi
+
+  printf 'pane_dead=%s\n' "$(panepilot_pane_dead)"
+  printf 'current_command=%s\n' "$(panepilot_pane_current_command)"
+  printf 'start_command=%s\n' "$(panepilot_pane_start_command)"
 }
 
 send() {
@@ -159,6 +223,12 @@ agent_cmd=$PANEPILOT_AGENT_CMD
 agent_env_file=$PANEPILOT_AGENT_ENV_FILE
 agent_prelude=$PANEPILOT_AGENT_PRELUDE
 agent_shell=$PANEPILOT_AGENT_SHELL
+process_regex=$PANEPILOT_PROCESS_REGEX
+ready_regex=$PANEPILOT_READY_REGEX
+error_regex=$PANEPILOT_ERROR_REGEX
+wait_for_ready=$PANEPILOT_WAIT_FOR_READY
+ready_timeout_seconds=$PANEPILOT_READY_TIMEOUT_SECONDS
+ready_poll_interval_seconds=$PANEPILOT_READY_POLL_INTERVAL_SECONDS
 log_dir=$PANEPILOT_LOG_DIR
 task_file=$PANEPILOT_TASK_FILE
 compact_interval_seconds=$PANEPILOT_COMPACT_INTERVAL_SECONDS
@@ -177,6 +247,8 @@ Commands:
   restart
   attach
   status
+  health
+  wait-ready [seconds]
   capture [lines]
   logs [component] [lines]
   send <message>
@@ -192,6 +264,8 @@ case "${1:-}" in
   restart) restart ;;
   attach) attach ;;
   status) status ;;
+  health) health ;;
+  wait-ready) shift; wait_ready "${1:-}" ;;
   capture) shift; capture "${1:-}" ;;
   logs) shift; logs "${1:-}" "${2:-}" ;;
   send) shift; send "$@" ;;

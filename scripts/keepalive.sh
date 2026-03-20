@@ -9,10 +9,6 @@ PANEPILOT_SCRIPT="$SCRIPT_DIR/assistant.sh"
 LOG_FILE=$(panepilot_log_path keepalive)
 LAST_COMPACT_FILE="$PANEPILOT_LOG_DIR/last-compact"
 
-check_alive() {
-  tmux has-session -t "$PANEPILOT_SESSION" 2>/dev/null
-}
-
 need_compact() {
   if [[ ! -f "$LAST_COMPACT_FILE" ]]; then
     return 0
@@ -37,15 +33,18 @@ main() {
   ensure_panepilot_dirs
   panepilot_log "$LOG_FILE" "keepalive check"
 
-  if check_alive; then
-    panepilot_log "$LOG_FILE" "session is alive"
+  local state
+  state=$(panepilot_health_state)
+
+  if panepilot_state_is_healthy "$state"; then
+    panepilot_log "$LOG_FILE" "session is healthy (state=$state)"
     if need_compact; then
       do_compact
     fi
     return 0
   fi
 
-  panepilot_log "$LOG_FILE" "session missing, restarting"
+  panepilot_log "$LOG_FILE" "session unhealthy (state=$state), restarting"
   export PANEPILOT_ENTRYPOINT="$REPO_ROOT/bin/panepilot"
   "$PANEPILOT_SCRIPT" start
   sleep 5

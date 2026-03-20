@@ -38,6 +38,14 @@ Common examples:
 - `openclaw`
 - custom wrapper scripts such as `bin/my-agent`
 
+Validated profiles currently included:
+
+| Runtime | Profile | Validation status |
+| --- | --- | --- |
+| Codex | `examples/codex.env` | verified |
+| OpenClaw | `examples/openclaw.env` | verified |
+| Claude | `examples/claude.env` | template only |
+
 ## Quick Start
 
 ```bash
@@ -65,6 +73,8 @@ Common commands:
 
 ```bash
 ./bin/panepilot status
+./bin/panepilot health
+./bin/panepilot wait-ready 20
 ./bin/panepilot attach
 ./bin/panepilot capture 80
 ./bin/panepilot logs keepalive 50
@@ -100,6 +110,9 @@ Example:
 ```bash
 PANEPILOT_AGENT_CMD="codex"
 PANEPILOT_AGENT_ENV_FILE="$HOME/.codex/crs_oai.env"
+PANEPILOT_PROCESS_REGEX="^(node|codex)$"
+PANEPILOT_READY_REGEX="OpenAI Codex|Use /skills|100% left"
+PANEPILOT_ERROR_REGEX="Missing environment variable"
 PANEPILOT_WORK_DIR="$HOME/work/my-project"
 PANEPILOT_SESSION="panepilot"
 PANEPILOT_LOG_DIR="$HOME/.local/state/panepilot"
@@ -112,9 +125,12 @@ See:
 - `examples/codex.env`
 - `examples/claude.env`
 - `examples/openclaw.env`
+- `docs/runtimes.md`
 
 Useful operational commands:
 
+- `./bin/panepilot health` for the current runtime state
+- `./bin/panepilot wait-ready 20` to block until the pane becomes ready
 - `./bin/panepilot capture 120` to inspect the current pane buffer
 - `./bin/panepilot logs assistant 50` to tail PanePilot logs
 - `./bin/panepilot logs keepalive 50` to inspect restart behavior
