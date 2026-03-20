@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">PanePilot terminal demo</title>
+  <desc id="desc">Stylized terminal screenshot showing PanePilot commands for starting a session, sending a task, and checking status.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1220"/>
+      <stop offset="100%" stop-color="#172033"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="720" fill="#e6edf3"/>
+  <rect x="70" y="60" width="1060" height="600" rx="24" fill="url(#bg)"/>
+  <circle cx="115" cy="100" r="10" fill="#ff5f57"/>
+  <circle cx="145" cy="100" r="10" fill="#febc2e"/>
+  <circle cx="175" cy="100" r="10" fill="#28c840"/>
+  <text x="230" y="108" fill="#9fb0c7" font-family="monospace" font-size="24">panepilot demo</text>
+
+  <text x="110" y="170" fill="#8bd5ca" font-family="monospace" font-size="30">$ ./bin/panepilot start</text>
+  <text x="110" y="220" fill="#f0f6fc" font-family="monospace" font-size="28">Started session: panepilot</text>
+  <text x="110" y="260" fill="#9fb0c7" font-family="monospace" font-size="28">Attach with: ./bin/panepilot attach</text>
+
+  <text x="110" y="340" fill="#8bd5ca" font-family="monospace" font-size="30">$ ./bin/panepilot send "Review the open TODOs in this repo."</text>
+  <text x="110" y="390" fill="#f0f6fc" font-family="monospace" font-size="28">Sent task to panepilot</text>
+
+  <text x="110" y="470" fill="#8bd5ca" font-family="monospace" font-size="30">$ ./bin/panepilot status</text>
+  <text x="110" y="520" fill="#f0f6fc" font-family="monospace" font-size="28">running</text>
+  <text x="110" y="560" fill="#f0f6fc" font-family="monospace" font-size="28">session=panepilot</text>
+  <text x="110" y="600" fill="#f0f6fc" font-family="monospace" font-size="28">agent_cmd=codex</text>
+  <text x="110" y="640" fill="#f0f6fc" font-family="monospace" font-size="28">log_dir=/home/me/.local/state/panepilot</text>
+</svg>

@@ -1,42 +1,42 @@
 # PanePilot
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 Persistent tmux workspaces for terminal-native coding agents.
 
-`PanePilot` gives agent CLIs a stable operating surface: start a session once,
+PanePilot gives agent CLIs a stable operating surface: start a session once,
 detach from it, reattach later, inject tasks from scripts, and keep the session
-alive across terminal disconnects. It is designed for real machines, not demo
-shells.
+alive across terminal disconnects.
 
-By default the runtime command is configurable, so the same workflow can drive
-`claude`, `codex`, `openclaw`, or any other terminal agent CLI.
+It is designed for real machines, not demo shells.
 
-## Why use it
+![PanePilot demo](docs/assets/panepilot-demo.svg)
 
-Most coding agents behave like interactive terminal apps, but the actual work
-you want from them is often long-running:
+## Why it exists
 
-- keep a session alive while you disconnect or reboot your terminal
+Most coding agents behave like interactive terminal apps, but real usage is
+often longer-running than one terminal tab:
+
+- keep a session alive while you disconnect
 - send prompts without attaching to the pane
-- resume the same workspace instead of starting from scratch
+- keep one agent pinned to one workspace
+- recover the session if the agent exits
 - schedule recurring prompts with cron
-- keep logs and local state out of the git repo
+- keep logs and local state out of the repo
 
 PanePilot is the thin operational layer around that workflow.
 
-## Features
+## What it supports
 
-- Persistent tmux-backed agent session
-- Configurable agent command and working directory
-- `send` and `send-file` task injection helpers
-- Optional keepalive script with periodic compaction
-- Optional nightly task automation
-- User-local config instead of hardcoded personal paths
+PanePilot is runtime-agnostic. If the agent exposes a terminal command, you can
+run it inside the managed tmux session.
 
-## Requirements
+Common examples:
 
-- `bash`
-- `tmux`
-- a terminal agent CLI on your `PATH`
+- `claude`
+- `codex`
+- `openclaw`
+- custom wrapper scripts such as `bin/my-agent`
 
 ## Quick Start
 
@@ -48,7 +48,7 @@ cp config/panepilot.env.example config/panepilot.env
 
 Edit `config/panepilot.env` and set at least:
 
-- `PANEPILOT_AGENT_CMD`, for example `claude`, `codex`, or `openclaw`
+- `PANEPILOT_AGENT_CMD`, for example `codex`
 - `PANEPILOT_WORK_DIR`, the workspace you want the agent to run in
 
 Then start the session:
@@ -67,6 +67,24 @@ Common commands:
 ./bin/panepilot config
 ```
 
+## What it looks like
+
+```text
+$ ./bin/panepilot start
+Started session: panepilot
+Attach with: ./bin/panepilot attach
+
+$ ./bin/panepilot send "Summarize the open TODOs in this repo."
+Sent task to panepilot
+
+$ ./bin/panepilot status
+running
+session=panepilot
+work_dir=/home/me/work/my-project
+agent_cmd=codex
+log_dir=/home/me/.local/state/panepilot
+```
+
 ## Configuration
 
 Local configuration lives in `config/panepilot.env` and is gitignored.
@@ -81,7 +99,12 @@ PANEPILOT_LOG_DIR="$HOME/.local/state/panepilot"
 PANEPILOT_TASK_FILE="$HOME/work/my-project/tasks/nightly.md"
 ```
 
-See `config/panepilot.env.example` for the full set of options.
+See:
+
+- `config/panepilot.env.example`
+- `examples/codex.env`
+- `examples/claude.env`
+- `examples/openclaw.env`
 
 ## Optional Automation
 
@@ -106,18 +129,30 @@ own `tasks/nightly.md`.
 - `Ctrl+b [`: enter scroll mode
 - `q`: exit scroll mode
 
-## Demo
+## How it is different
 
-The repository includes a simple launch checklist and demo outline:
+PanePilot is not:
 
-- `docs/publish-checklist.md`
+- a workflow engine
+- a scheduler platform
+- a multi-agent orchestrator
+- a hosted SaaS
+
+PanePilot is:
+
+- one durable agent session
+- one real working directory
+- one simple control surface around tmux
+
+## Demo And Launch Notes
+
 - `docs/demo-script.md`
+- `docs/publish-checklist.md`
+- `docs/launch-post.md`
 
-## Scope
+## Contributing
 
-PanePilot is intentionally small. It is not a workflow engine, scheduler, or
-multi-agent orchestrator. The goal is a dependable single-agent workspace layer
-that works with minimal moving parts.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
