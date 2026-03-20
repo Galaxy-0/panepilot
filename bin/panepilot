@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR=$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+export PANEPILOT_ENTRYPOINT="./bin/panepilot"
+exec "$SCRIPT_DIR/../scripts/assistant.sh" "$@"

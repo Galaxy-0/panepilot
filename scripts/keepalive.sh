@@ -1,61 +1,54 @@
-#!/bin/bash
-# assistant-keepalive.sh - 助手保活 & 健康维护
-# 建议每小时运行一次 (cron)
+#!/usr/bin/env bash
+set -euo pipefail
 
-SESSION="research-assistant"
-ASSISTANT="$HOME/scripts/research-assistant.sh"
-LOG_FILE="$HOME/logs/keepalive.log"
-LAST_COMPACT_FILE="/tmp/assistant-last-compact"
+SCRIPT_DIR=$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/common.sh"
 
-log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
-}
+PANEPILOT_SCRIPT="$SCRIPT_DIR/assistant.sh"
+LOG_FILE=$(panepilot_log_path keepalive)
+LAST_COMPACT_FILE="$PANEPILOT_LOG_DIR/last-compact"
 
-# 检查会话是否存活
 check_alive() {
-    tmux has-session -t "$SESSION" 2>/dev/null
+  tmux has-session -t "$PANEPILOT_SESSION" 2>/dev/null
 }
 
-# 检查上次 compact 时间（每 6 小时 compact 一次）
 need_compact() {
-    if [ ! -f "$LAST_COMPACT_FILE" ]; then
-        return 0  # 从未 compact，需要
-    fi
+  if [[ ! -f "$LAST_COMPACT_FILE" ]]; then
+    return 0
+  fi
 
-    local last=$(cat "$LAST_COMPACT_FILE")
-    local now=$(date +%s)
-    local diff=$((now - last))
-    local six_hours=$((6 * 60 * 60))
-
-    [ $diff -gt $six_hours ]
+  local last now diff
+  last=$(<"$LAST_COMPACT_FILE")
+  now=$(date +%s)
+  diff=$((now - last))
+  [[ "$diff" -gt "$PANEPILOT_COMPACT_INTERVAL_SECONDS" ]]
 }
 
-# 执行 compact
 do_compact() {
-    log "执行 /compact 压缩上下文"
-    tmux send-keys -t "$SESSION" "/compact" Enter
-    date +%s > "$LAST_COMPACT_FILE"
-    sleep 10  # 等待 compact 完成
+  panepilot_log "$LOG_FILE" "sending compact command"
+  tmux send-keys -t "$PANEPILOT_SESSION" "$PANEPILOT_COMPACT_COMMAND" Enter
+  date +%s > "$LAST_COMPACT_FILE"
+  sleep 10
 }
 
-# 主逻辑
-log "========== 保活检查 =========="
+main() {
+  require_command tmux
+  ensure_panepilot_dirs
+  panepilot_log "$LOG_FILE" "keepalive check"
 
-if check_alive; then
-    log "✅ 会话存活"
-
-    # 检查是否需要 compact
+  if check_alive; then
+    panepilot_log "$LOG_FILE" "session is alive"
     if need_compact; then
-        log "⚠️ 上下文可能过大，执行 compact"
-        do_compact
+      do_compact
     fi
-else
-    log "❌ 会话已断开，重新启动"
-    $ASSISTANT start
-    sleep 5
+    return 0
+  fi
 
-    # 发送恢复消息
-    $ASSISTANT send "我刚才重启了，请继续之前的工作。如果有未完成的任务，请告诉我。"
-fi
+  panepilot_log "$LOG_FILE" "session missing, restarting"
+  "$PANEPILOT_SCRIPT" start
+  sleep 5
+  "$PANEPILOT_SCRIPT" send "$PANEPILOT_RECOVERY_MESSAGE"
+}
 
-log "========== 检查完成 =========="
+main

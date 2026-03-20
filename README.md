@@ -1,104 +1,123 @@
-# Claude Crew
+# PanePilot
 
-A persistent Claude Code research assistant that runs in tmux, supporting automated tasks and manual interaction.
+Persistent tmux workspaces for terminal-native coding agents.
+
+`PanePilot` gives agent CLIs a stable operating surface: start a session once,
+detach from it, reattach later, inject tasks from scripts, and keep the session
+alive across terminal disconnects. It is designed for real machines, not demo
+shells.
+
+By default the runtime command is configurable, so the same workflow can drive
+`claude`, `codex`, `openclaw`, or any other terminal agent CLI.
+
+## Why use it
+
+Most coding agents behave like interactive terminal apps, but the actual work
+you want from them is often long-running:
+
+- keep a session alive while you disconnect or reboot your terminal
+- send prompts without attaching to the pane
+- resume the same workspace instead of starting from scratch
+- schedule recurring prompts with cron
+- keep logs and local state out of the git repo
+
+PanePilot is the thin operational layer around that workflow.
 
 ## Features
 
-- **Persistent Session**: Claude Code runs in tmux, survives terminal disconnection
-- **Dual Input**: Both manual interaction and automated task injection
-- **Auto-Maintenance**: Periodic `/compact` to manage context, auto-restart on failure
-- **Scheduled Tasks**: Cron integration for nightly research, morning briefs
+- Persistent tmux-backed agent session
+- Configurable agent command and working directory
+- `send` and `send-file` task injection helpers
+- Optional keepalive script with periodic compaction
+- Optional nightly task automation
+- User-local config instead of hardcoded personal paths
+
+## Requirements
+
+- `bash`
+- `tmux`
+- a terminal agent CLI on your `PATH`
 
 ## Quick Start
 
 ```bash
-# Start the assistant
-./scripts/assistant.sh start
-
-# Attach to interact
-./scripts/assistant.sh attach
-
-# Detach (keep running): Ctrl+b, d
-
-# Send task without entering session
-./scripts/assistant.sh send "Search for latest AI papers"
+git clone https://github.com/Galaxy-0/panepilot.git
+cd panepilot
+cp config/panepilot.env.example config/panepilot.env
 ```
 
-## Installation
+Edit `config/panepilot.env` and set at least:
+
+- `PANEPILOT_AGENT_CMD`, for example `claude`, `codex`, or `openclaw`
+- `PANEPILOT_WORK_DIR`, the workspace you want the agent to run in
+
+Then start the session:
 
 ```bash
-# Clone the repo
-git clone https://github.com/YOUR_USERNAME/claude-crew.git
-cd claude-crew
-
-# Add alias to ~/.zshrc
-echo 'alias crew="~/Project/GalaxyAI/claude-crew/scripts/assistant.sh"' >> ~/.zshrc
-source ~/.zshrc
-
-# Now use: crew start, crew attach, crew send "..."
+./bin/panepilot start
 ```
 
-## Scripts
-
-| Script | Purpose | Usage |
-|--------|---------|-------|
-| `scripts/assistant.sh` | Main control script | Manual |
-| `scripts/keepalive.sh` | Health check & compact | Cron (hourly) |
-| `scripts/tasks/nightly.sh` | Nightly research task | Cron (22:00) |
-
-## Cron Setup (Optional)
+Common commands:
 
 ```bash
-crontab -e
-
-# Add:
-0 * * * * /path/to/claude-crew/scripts/keepalive.sh
-0 22 * * * /path/to/claude-crew/scripts/tasks/nightly.sh
+./bin/panepilot status
+./bin/panepilot attach
+./bin/panepilot send "Review the open TODOs in this repo."
+./bin/panepilot send-file ./tasks/example-nightly.md
+./bin/panepilot config
 ```
 
-## Architecture
+## Configuration
 
-```
-┌─────────────────────────────────────────────────────┐
-│                     You (Supervisor)                 │
-│                                                     │
-│   Manual: crew attach    Auto: crew send "task"    │
-└─────────────────────────┬───────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────┐
-│                   tmux session                       │
-│            (persistent, detachable)                 │
-│                                                     │
-│   ┌─────────────────────────────────────────────┐   │
-│   │            Claude Code (interactive)         │   │
-│   │                                             │   │
-│   │   - Receives input from you or scripts      │   │
-│   │   - Context auto-compacted every 6 hours    │   │
-│   │   - Auto-restarts if crashed                │   │
-│   └─────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────┘
-```
+Local configuration lives in `config/panepilot.env` and is gitignored.
 
-## Commands
+Example:
 
 ```bash
-crew start        # Start assistant in tmux
-crew stop         # Stop assistant
-crew attach       # Enter interactive session
-crew status       # Check if running
-crew send "msg"   # Send task (no enter session)
-crew send-file f  # Send task from file
-crew help         # Show help
+PANEPILOT_AGENT_CMD="codex"
+PANEPILOT_WORK_DIR="$HOME/work/my-project"
+PANEPILOT_SESSION="panepilot"
+PANEPILOT_LOG_DIR="$HOME/.local/state/panepilot"
+PANEPILOT_TASK_FILE="$HOME/work/my-project/tasks/nightly.md"
 ```
 
-## Tmux Shortcuts (inside session)
+See `config/panepilot.env.example` for the full set of options.
 
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+b, d` | Detach (keep running) |
-| `Ctrl+b, [` | Scroll mode (view history) |
-| `q` | Exit scroll mode |
+## Optional Automation
+
+Keep the session alive and compact the context every few hours:
+
+```bash
+0 * * * * /path/to/panepilot/scripts/keepalive.sh
+```
+
+Send a nightly task prompt from a file:
+
+```bash
+0 22 * * * /path/to/panepilot/scripts/tasks/nightly.sh
+```
+
+You can use `tasks/example-nightly.md` as a starting point and copy it to your
+own `tasks/nightly.md`.
+
+## Tmux Shortcuts
+
+- `Ctrl+b d`: detach and leave the agent running
+- `Ctrl+b [`: enter scroll mode
+- `q`: exit scroll mode
+
+## Demo
+
+The repository includes a simple launch checklist and demo outline:
+
+- `docs/publish-checklist.md`
+- `docs/demo-script.md`
+
+## Scope
+
+PanePilot is intentionally small. It is not a workflow engine, scheduler, or
+multi-agent orchestrator. The goal is a dependable single-agent workspace layer
+that works with minimal moving parts.
 
 ## License
 
