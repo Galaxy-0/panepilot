@@ -66,6 +66,7 @@ start() {
   launch_command=$(panepilot_agent_launch_command)
   ensure_panepilot_dirs
   tmux new-session -d -s "$PANEPILOT_SESSION" -c "$PANEPILOT_WORK_DIR" "$launch_command"
+  panepilot_mark_session_metadata "$PANEPILOT_SESSION"
   sleep 2
 
   if [[ "$PANEPILOT_WAIT_FOR_READY" == "1" ]]; then
@@ -91,6 +92,20 @@ stop() {
 
 restart() {
   stop
+  start
+}
+
+restart_if_unhealthy() {
+  local state
+  state=$(panepilot_health_state)
+
+  if panepilot_state_is_healthy "$state"; then
+    printf 'Session already healthy: %s (%s)\n' "$PANEPILOT_SESSION" "$state"
+    return 0
+  fi
+
+  printf 'Restarting unhealthy session: %s (%s)\n' "$PANEPILOT_SESSION" "$state"
+  stop >/dev/null 2>&1 || true
   start
 }
 
@@ -151,6 +166,87 @@ health() {
   printf 'pane_dead=%s\n' "$(panepilot_pane_dead)"
   printf 'current_command=%s\n' "$(panepilot_pane_current_command)"
   printf 'start_command=%s\n' "$(panepilot_pane_start_command)"
+}
+
+list_sessions() {
+  require_command tmux
+
+  printf 'session\tstate\tcurrent_command\twork_dir\n'
+  panepilot_list_managed_sessions
+
+  if panepilot_has_session && [[ "$(panepilot_session_option "$PANEPILOT_SESSION" "@panepilot_managed")" != "1" ]]; then
+    printf '%s\t%s\t%s\t%s\n' \
+      "$PANEPILOT_SESSION" \
+      "$(panepilot_health_state)" \
+      "$(panepilot_pane_current_command)" \
+      "$PANEPILOT_WORK_DIR"
+  fi
+}
+
+doctor() {
+  local failures=0
+  local agent_program state
+
+  printf 'config_file=%s\n' "$CONFIG_FILE"
+
+  if command -v tmux >/dev/null 2>&1; then
+    printf 'check_tmux=ok\n'
+  else
+    printf 'check_tmux=missing\n'
+    failures=$((failures + 1))
+  fi
+
+  if [[ -f "$CONFIG_FILE" ]]; then
+    printf 'check_config_file=ok\n'
+  else
+    printf 'check_config_file=missing\n'
+    failures=$((failures + 1))
+  fi
+
+  if [[ -d "$PANEPILOT_WORK_DIR" ]]; then
+    printf 'check_work_dir=ok\n'
+  else
+    printf 'check_work_dir=missing\n'
+    failures=$((failures + 1))
+  fi
+
+  agent_program=$(panepilot_agent_program)
+  if [[ -n "$agent_program" ]] && command -v "$agent_program" >/dev/null 2>&1; then
+    printf 'check_agent_command=ok\n'
+  else
+    printf 'check_agent_command=missing\n'
+    failures=$((failures + 1))
+  fi
+
+  if [[ -n "$PANEPILOT_AGENT_ENV_FILE" ]]; then
+    if [[ -r "$PANEPILOT_AGENT_ENV_FILE" ]]; then
+      printf 'check_agent_env_file=ok\n'
+    else
+      printf 'check_agent_env_file=missing\n'
+      failures=$((failures + 1))
+    fi
+  else
+    printf 'check_agent_env_file=not_set\n'
+  fi
+
+  state=$(panepilot_health_state)
+  printf 'session_state=%s\n' "$state"
+  if panepilot_state_is_healthy "$state"; then
+    printf 'check_session_health=ok\n'
+  else
+    printf 'check_session_health=fail\n'
+    failures=$((failures + 1))
+  fi
+  if panepilot_has_session; then
+    printf 'current_command=%s\n' "$(panepilot_pane_current_command)"
+  fi
+
+  if (( failures > 0 )); then
+    printf 'doctor=fail (%s issue(s))\n' "$failures" >&2
+    return 1
+  fi
+
+  printf 'doctor=ok\n'
 }
 
 send() {
@@ -245,9 +341,12 @@ Commands:
   start
   stop
   restart
+  restart-if-unhealthy
   attach
   status
   health
+  list
+  doctor
   wait-ready [seconds]
   capture [lines]
   logs [component] [lines]
@@ -262,9 +361,12 @@ case "${1:-}" in
   start) start ;;
   stop) stop ;;
   restart) restart ;;
+  restart-if-unhealthy) restart_if_unhealthy ;;
   attach) attach ;;
   status) status ;;
   health) health ;;
+  list) list_sessions ;;
+  doctor) doctor ;;
   wait-ready) shift; wait_ready "${1:-}" ;;
   capture) shift; capture "${1:-}" ;;
   logs) shift; logs "${1:-}" "${2:-}" ;;

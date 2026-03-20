@@ -95,6 +95,19 @@ panepilot_pane_target() {
   printf '%s:0\n' "$PANEPILOT_SESSION"
 }
 
+panepilot_session_option() {
+  local session="$1"
+  local option="$2"
+  tmux show-options -t "$session" -vq "$option" 2>/dev/null || true
+}
+
+panepilot_set_session_option() {
+  local session="$1"
+  local option="$2"
+  local value="$3"
+  tmux set-option -t "$session" -q "$option" "$value"
+}
+
 panepilot_pane_dead() {
   tmux display-message -p -t "$(panepilot_pane_target)" '#{pane_dead}'
 }
@@ -173,4 +186,80 @@ panepilot_health_state() {
 panepilot_state_is_healthy() {
   local state="$1"
   [[ "$state" == "ready" || "$state" == "running" ]]
+}
+
+panepilot_mark_session_metadata() {
+  local session="$1"
+  panepilot_set_session_option "$session" "@panepilot_managed" "1"
+  panepilot_set_session_option "$session" "@panepilot_work_dir" "$PANEPILOT_WORK_DIR"
+  panepilot_set_session_option "$session" "@panepilot_agent_cmd" "$PANEPILOT_AGENT_CMD"
+  panepilot_set_session_option "$session" "@panepilot_process_regex" "$PANEPILOT_PROCESS_REGEX"
+  panepilot_set_session_option "$session" "@panepilot_ready_regex" "$PANEPILOT_READY_REGEX"
+  panepilot_set_session_option "$session" "@panepilot_error_regex" "$PANEPILOT_ERROR_REGEX"
+  panepilot_set_session_option "$session" "@panepilot_config_file" "$CONFIG_FILE"
+}
+
+panepilot_session_capture_output() {
+  local session="$1"
+  local lines="${2:-$PANEPILOT_CAPTURE_LINES}"
+  tmux capture-pane -pt "${session}:0" -S "-$lines"
+}
+
+panepilot_session_health_state() {
+  local session="$1"
+
+  if ! tmux has-session -t "$session" 2>/dev/null; then
+    printf 'stopped\n'
+    return 0
+  fi
+
+  local pane_dead current_command capture process_regex ready_regex error_regex
+  pane_dead=$(tmux display-message -p -t "${session}:0" '#{pane_dead}')
+  current_command=$(tmux display-message -p -t "${session}:0" '#{pane_current_command}')
+  process_regex=$(panepilot_session_option "$session" "@panepilot_process_regex")
+  ready_regex=$(panepilot_session_option "$session" "@panepilot_ready_regex")
+  error_regex=$(panepilot_session_option "$session" "@panepilot_error_regex")
+
+  if [[ "$pane_dead" == "1" ]]; then
+    printf 'dead\n'
+    return 0
+  fi
+
+  if [[ -n "$process_regex" ]] && ! [[ "$current_command" =~ $process_regex ]]; then
+    printf 'process_mismatch\n'
+    return 0
+  fi
+
+  capture=$(panepilot_session_capture_output "$session" "$PANEPILOT_CAPTURE_LINES")
+
+  if [[ -n "$error_regex" ]] && [[ "$capture" =~ $error_regex ]]; then
+    printf 'error\n'
+    return 0
+  fi
+
+  if [[ -n "$ready_regex" ]]; then
+    if [[ "$capture" =~ $ready_regex ]]; then
+      printf 'ready\n'
+    else
+      printf 'starting\n'
+    fi
+    return 0
+  fi
+
+  printf 'running\n'
+}
+
+panepilot_list_managed_sessions() {
+  local session
+  tmux list-sessions -F '#{session_name}' 2>/dev/null | while read -r session; do
+    if [[ "$(panepilot_session_option "$session" "@panepilot_managed")" != "1" ]]; then
+      continue
+    fi
+
+    local state current_command work_dir
+    state=$(panepilot_session_health_state "$session")
+    current_command=$(tmux display-message -p -t "${session}:0" '#{pane_current_command}')
+    work_dir=$(panepilot_session_option "$session" "@panepilot_work_dir")
+    printf '%s\t%s\t%s\t%s\n' "$session" "$state" "$current_command" "$work_dir"
+  done
 }

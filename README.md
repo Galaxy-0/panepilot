@@ -74,6 +74,9 @@ Common commands:
 ```bash
 ./bin/panepilot status
 ./bin/panepilot health
+./bin/panepilot list
+./bin/panepilot doctor
+./bin/panepilot restart-if-unhealthy
 ./bin/panepilot wait-ready 20
 ./bin/panepilot attach
 ./bin/panepilot capture 80
@@ -130,6 +133,9 @@ See:
 Useful operational commands:
 
 - `./bin/panepilot health` for the current runtime state
+- `./bin/panepilot list` to inspect managed tmux sessions
+- `./bin/panepilot doctor` to validate config, runtime command, env file, and session state
+- `./bin/panepilot restart-if-unhealthy` to recover only when state is not healthy
 - `./bin/panepilot wait-ready 20` to block until the pane becomes ready
 - `./bin/panepilot capture 120` to inspect the current pane buffer
 - `./bin/panepilot logs assistant 50` to tail PanePilot logs
