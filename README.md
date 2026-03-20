@@ -12,6 +12,11 @@ It is designed for real machines, not demo shells.
 
 ![PanePilot demo](docs/assets/panepilot-demo.svg)
 
+## One-line Pitch
+
+PanePilot is the missing operational layer between a terminal coding agent and a
+real long-running workspace.
+
 ## Why it exists
 
 Most coding agents behave like interactive terminal apps, but real usage is
@@ -24,7 +29,23 @@ often longer-running than one terminal tab:
 - schedule recurring prompts with cron
 - keep logs and local state out of the repo
 
-PanePilot is the thin operational layer around that workflow.
+PanePilot is the thin control surface around that workflow.
+
+## Why not just tmux?
+
+Plain tmux gives you persistence, but not operating conventions.
+
+PanePilot adds:
+
+- runtime-aware health checks
+- ready detection
+- conditional recovery instead of blind restarts
+- runtime profiles for different agent CLIs
+- one stable command surface for status, capture, logs, and task injection
+
+If your answer is "I can already do this in tmux", that is true for the first
+10 minutes. PanePilot exists for the third day of using the same agent workspace
+on the same machine.
 
 ## What it supports
 
@@ -45,6 +66,8 @@ Validated profiles currently included:
 | Codex | `examples/codex.env` | verified |
 | OpenClaw | `examples/openclaw.env` | verified |
 | Claude | `examples/claude.env` | template only |
+
+See `docs/runtimes.md` for runtime-specific notes.
 
 ## Quick Start
 
@@ -96,12 +119,11 @@ Attach with: ./bin/panepilot attach
 $ ./bin/panepilot send "Summarize the open TODOs in this repo."
 Sent task to panepilot
 
-$ ./bin/panepilot status
-running
-session=panepilot
-work_dir=/home/me/work/my-project
-agent_cmd=codex
-log_dir=/home/me/.local/state/panepilot
+$ ./bin/panepilot doctor
+check_tmux=ok
+check_agent_command=ok
+session_state=ready
+doctor=ok
 ```
 
 ## Configuration
@@ -164,26 +186,49 @@ own `tasks/nightly.md`.
 - `Ctrl+b [`: enter scroll mode
 - `q`: exit scroll mode
 
-## How it is different
+## FAQ
 
-PanePilot is not:
+### Is this only for one agent?
 
-- a workflow engine
-- a scheduler platform
-- a multi-agent orchestrator
-- a hosted SaaS
+One PanePilot config manages one primary session well. You can still run
+multiple sessions by using different config files or tmux session names.
 
-PanePilot is:
+### Is this a replacement for a workflow engine?
 
-- one durable agent session
-- one real working directory
-- one simple control surface around tmux
+No. PanePilot is intentionally small. It is not a scheduler platform, hosted
+service, or multi-agent orchestrator.
 
-## Demo And Launch Notes
+### Does it require tmux expertise?
+
+Not much. You still benefit from knowing basic tmux keys, but the day-to-day
+control surface is `./bin/panepilot`, not raw tmux commands.
+
+### What if my agent startup output is different?
+
+Tune:
+
+- `PANEPILOT_PROCESS_REGEX`
+- `PANEPILOT_READY_REGEX`
+- `PANEPILOT_ERROR_REGEX`
+
+## Roadmap
+
+Near-term priorities:
+
+- stronger runtime profiles
+- cleaner demo assets
+- better recovery heuristics
+- more battle-tested startup checks
+
+See [ROADMAP.md](ROADMAP.md).
+
+## Launch Assets
 
 - `docs/demo-script.md`
-- `docs/publish-checklist.md`
 - `docs/launch-post.md`
+- `docs/launch/x-post.md`
+- `docs/launch/reddit-post.md`
+- `docs/launch/hn-post.md`
 
 ## Contributing
 
