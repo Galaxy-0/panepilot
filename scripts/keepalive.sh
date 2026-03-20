@@ -46,6 +46,7 @@ main() {
   fi
 
   panepilot_log "$LOG_FILE" "session missing, restarting"
+  export PANEPILOT_ENTRYPOINT="$REPO_ROOT/bin/panepilot"
   "$PANEPILOT_SCRIPT" start
   sleep 5
   "$PANEPILOT_SCRIPT" send "$PANEPILOT_RECOVERY_MESSAGE"

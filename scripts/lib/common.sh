@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-SCRIPT_DIR=$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-REPO_ROOT=$(cd -- "$SCRIPT_DIR/../.." && pwd)
+COMMON_LIB_DIR=$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+REPO_ROOT=$(cd -- "$COMMON_LIB_DIR/../.." && pwd)
 CONFIG_FILE="${PANEPILOT_CONFIG_FILE:-$REPO_ROOT/config/panepilot.env}"
 
 if [[ -f "$CONFIG_FILE" ]]; then
