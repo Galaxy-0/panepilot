@@ -51,6 +51,10 @@ Edit `config/panepilot.env` and set at least:
 - `PANEPILOT_AGENT_CMD`, for example `codex`
 - `PANEPILOT_WORK_DIR`, the workspace you want the agent to run in
 
+If your agent needs local API credentials, also set:
+
+- `PANEPILOT_AGENT_ENV_FILE`, for example `"$HOME/.codex/crs_oai.env"`
+
 Then start the session:
 
 ```bash
@@ -62,6 +66,8 @@ Common commands:
 ```bash
 ./bin/panepilot status
 ./bin/panepilot attach
+./bin/panepilot capture 80
+./bin/panepilot logs keepalive 50
 ./bin/panepilot send "Review the open TODOs in this repo."
 ./bin/panepilot send-file ./tasks/example-nightly.md
 ./bin/panepilot config
@@ -93,6 +99,7 @@ Example:
 
 ```bash
 PANEPILOT_AGENT_CMD="codex"
+PANEPILOT_AGENT_ENV_FILE="$HOME/.codex/crs_oai.env"
 PANEPILOT_WORK_DIR="$HOME/work/my-project"
 PANEPILOT_SESSION="panepilot"
 PANEPILOT_LOG_DIR="$HOME/.local/state/panepilot"
@@ -105,6 +112,12 @@ See:
 - `examples/codex.env`
 - `examples/claude.env`
 - `examples/openclaw.env`
+
+Useful operational commands:
+
+- `./bin/panepilot capture 120` to inspect the current pane buffer
+- `./bin/panepilot logs assistant 50` to tail PanePilot logs
+- `./bin/panepilot logs keepalive 50` to inspect restart behavior
 
 ## Optional Automation
 

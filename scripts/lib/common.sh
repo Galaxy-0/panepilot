@@ -14,11 +14,15 @@ fi
 PANEPILOT_SESSION=${PANEPILOT_SESSION:-panepilot}
 PANEPILOT_WORK_DIR=${PANEPILOT_WORK_DIR:-$REPO_ROOT}
 PANEPILOT_AGENT_CMD=${PANEPILOT_AGENT_CMD:-claude}
+PANEPILOT_AGENT_ENV_FILE=${PANEPILOT_AGENT_ENV_FILE:-}
+PANEPILOT_AGENT_PRELUDE=${PANEPILOT_AGENT_PRELUDE:-}
+PANEPILOT_AGENT_SHELL=${PANEPILOT_AGENT_SHELL:-bash}
 PANEPILOT_LOG_DIR=${PANEPILOT_LOG_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/panepilot}
 PANEPILOT_TASK_FILE=${PANEPILOT_TASK_FILE:-$REPO_ROOT/tasks/nightly.md}
 PANEPILOT_COMPACT_INTERVAL_SECONDS=${PANEPILOT_COMPACT_INTERVAL_SECONDS:-21600}
 PANEPILOT_COMPACT_COMMAND=${PANEPILOT_COMPACT_COMMAND:-/compact}
 PANEPILOT_RECOVERY_MESSAGE=${PANEPILOT_RECOVERY_MESSAGE:-The session was restarted. Resume the previous task and summarize any missing context first.}
+PANEPILOT_CAPTURE_LINES=${PANEPILOT_CAPTURE_LINES:-120}
 
 panepilot_log_path() {
   printf '%s/%s.log\n' "$PANEPILOT_LOG_DIR" "$1"
@@ -41,4 +45,38 @@ require_command() {
     printf 'Missing required command: %s\n' "$name" >&2
     exit 1
   fi
+}
+
+require_readable_file() {
+  local file="$1"
+  if [[ ! -r "$file" ]]; then
+    printf 'Missing readable file: %s\n' "$file" >&2
+    exit 1
+  fi
+}
+
+panepilot_agent_program() {
+  local words=()
+  read -r -a words <<< "$PANEPILOT_AGENT_CMD"
+  printf '%s\n' "${words[0]:-}"
+}
+
+panepilot_agent_launch_command() {
+  local script=""
+
+  if [[ -n "$PANEPILOT_AGENT_ENV_FILE" ]]; then
+    script+="source $(printf '%q' "$PANEPILOT_AGENT_ENV_FILE") && "
+  fi
+
+  if [[ -n "$PANEPILOT_AGENT_PRELUDE" ]]; then
+    script+="$PANEPILOT_AGENT_PRELUDE && "
+  fi
+
+  if [[ -z "$script" ]]; then
+    printf '%s\n' "$PANEPILOT_AGENT_CMD"
+    return 0
+  fi
+
+  script+="exec $PANEPILOT_AGENT_CMD"
+  printf '%q -lc %q\n' "$PANEPILOT_AGENT_SHELL" "$script"
 }
