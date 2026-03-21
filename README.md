@@ -2,11 +2,11 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Persistent tmux workspaces for terminal-native coding agents.
+Workspace management for terminal-native coding agents and agent teams.
 
-PanePilot gives agent CLIs a stable operating surface: start a session once,
-detach from it, reattach later, inject tasks from scripts, and keep the session
-alive across terminal disconnects.
+PanePilot gives agent CLIs a stable operating surface: start a workspace once,
+detach from it, reattach later, inject tasks from scripts, inspect runtime
+health, and recover sessions when they drift.
 
 It is designed for real machines, not demo shells.
 
@@ -14,26 +14,27 @@ It is designed for real machines, not demo shells.
 
 ## One-line Pitch
 
-PanePilot is the missing operational layer between a terminal coding agent and a
-real long-running workspace.
+PanePilot is a workspace manager for terminal-native coding agents.
 
 ## Why it exists
 
 Most coding agents behave like interactive terminal apps, but real usage is
-often longer-running than one terminal tab:
+closer to workspace management than one-off terminal sessions:
 
 - keep a session alive while you disconnect
 - send prompts without attaching to the pane
 - keep one agent pinned to one workspace
+- manage multiple workspaces across repos
+- understand which workspace is healthy, blocked, or broken
 - recover the session if the agent exits
 - schedule recurring prompts with cron
 - keep logs and local state out of the repo
 
-PanePilot is the thin control surface around that workflow.
+PanePilot is the control layer around that workflow.
 
 ## Why not just tmux?
 
-Plain tmux gives you persistence, but not operating conventions.
+Plain tmux gives you persistence, but not workspace management.
 
 PanePilot adds:
 
@@ -41,11 +42,22 @@ PanePilot adds:
 - ready detection
 - conditional recovery instead of blind restarts
 - runtime profiles for different agent CLIs
-- one stable command surface for status, capture, logs, and task injection
+- a stable command surface for status, capture, logs, and task injection
+- a path toward managing multiple agent workspaces as one system
 
 If your answer is "I can already do this in tmux", that is true for the first
-10 minutes. PanePilot exists for the third day of using the same agent workspace
-on the same machine.
+10 minutes. PanePilot exists for the third day of managing the same agent
+workspace, or the fifth workspace on the same machine.
+
+## Current Product Shape
+
+Today, PanePilot is strongest as:
+
+- a single-agent workspace manager
+- an operator surface for long-running terminal agent sessions
+- a base layer for future multi-agent workspace coordination
+
+It is not yet a full team control plane, but that is the direction.
 
 ## What it supports
 
@@ -190,13 +202,19 @@ own `tasks/nightly.md`.
 
 ### Is this only for one agent?
 
-One PanePilot config manages one primary session well. You can still run
-multiple sessions by using different config files or tmux session names.
+Right now, one PanePilot config manages one primary workspace well. You can run
+multiple workspaces by using different config files or tmux session names, but
+first-class multi-workspace and team flows are still ahead on the roadmap.
 
 ### Is this a replacement for a workflow engine?
 
-No. PanePilot is intentionally small. It is not a scheduler platform, hosted
-service, or multi-agent orchestrator.
+No. PanePilot is intentionally focused on workspace management, not abstract
+workflow orchestration.
+
+### Is this trying to replace subagents?
+
+No. Subagents are short-lived task delegation. PanePilot is about persistent
+workspaces and, over time, persistent agent team coordination.
 
 ### Does it require tmux expertise?
 
@@ -211,14 +229,13 @@ Tune:
 - `PANEPILOT_READY_REGEX`
 - `PANEPILOT_ERROR_REGEX`
 
-## Roadmap
+## Product Direction
 
-Near-term priorities:
+Short version:
 
-- stronger runtime profiles
-- cleaner demo assets
-- better recovery heuristics
-- more battle-tested startup checks
+- now: single-agent workspace manager
+- next: multi-workspace manager
+- later: agent team workspace control plane
 
 See [ROADMAP.md](ROADMAP.md).
 
